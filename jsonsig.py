@@ -27,9 +27,15 @@ def build_logger(log_level=logging.DEBUG):
     return logger
 
 
+# permission specs for chmod purposes
+RW_OWNER = stat.S_IRUSR | stat.S_IWUSR
+RW_OWNER_R_GO = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
+
 class JsonSigner(object):
 
     # payloads greater than this length will raise a ValueError
+    # TODO: could be a runtime option..?
     MAX_INPUT_LEN = 250
 
     @property
@@ -40,9 +46,45 @@ class JsonSigner(object):
     def public_key_path(self):
         return os.path.join(self.args.key_cache_dir, self.args.key_cache_name) + ".pub"
 
+    def write_file(self, path, contents, perms=None):
+        """
+        Write provided content to disk and (optionally) apply
+        the specified permissions.
+        """
+        # ensure the target dir exists
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(contents)
+        if perms:
+            os.chmod(path, perms)
+
+    def generate_keys(self, bits=4096):
+        """
+        Generate a new RSA public/private keypair of the specified bit length.
+        Returns the pycrypto key object, the PEM-encoded public key object,
+        and the PEM-encoded private key object.
+        """
+        self.logger.debug("Generating new {} bit key pair...".format(bits))
+        key = RSA.generate(bits=bits)
+        pub = key.publickey().exportKey("PEM")
+        pri = key.exportKey("PEM")
+        self.logger.debug("...done")
+        return key, pri, pub
+
+    def cache_keys(self, pri, pub):
+        """
+        Store the provided private and public key objects on the file system, chmodded with
+        reasonably secure permissions.
+        """
+        self.logger.debug("Caching new private key in {}".format(self.private_key_path))
+        self.write_file(self.private_key_path, pri, perms=RW_OWNER)
+        self.logger.debug("Caching new public key in {}".format(self.public_key_path))
+        self.write_file(self.public_key_path, pub, perms=RW_OWNER_R_GO)
+
     def read_keys(self):
         """
-        Look for cached key objects; if found, import and return them. If not found, return (None, None, None).
+        Look for cached key objects; if found, import and return them.
+        If not found, return (None, None, None).
         """
         key = pri = pub = None
         # if either the public or private key object is missing, bail
@@ -56,37 +98,15 @@ class JsonSigner(object):
                 pub = f.read()
         return key, pri, pub
 
-    def generate_keys(self, bits=4096):
-        """
-        Generate a new RSA public/private keypair of the specified bit length and cache it
-        on the filesystem. Returns the pycrypto key object, the PEM-encoded public key object,
-        and the PEM-encoded private key object.
-        """
-        self.logger.debug("Generating new {} bit key pair...".format(bits))
-        key = RSA.generate(bits=bits)
-        pub = key.publickey().exportKey("PEM")
-        pri = key.exportKey("PEM")
-        # ensure the key cache dir exists
-        os.makedirs(self.args.key_cache_dir, exist_ok=True)
-        self.logger.debug("Caching new private key in {}".format(self.private_key_path))
-        with open(self.private_key_path, "wb") as f:
-            f.write(pri)
-        self.logger.debug("Caching new public key in {}".format(self.public_key_path))
-        with open(self.public_key_path, "wb") as f:
-            f.write(pub)
-        # chmod files for more better gooder security
-        os.chmod(self.private_key_path, (stat.S_IRUSR | stat.S_IWUSR))
-        os.chmod(self.public_key_path, (stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH))
-        self.logger.debug("...done")
-        return key, pri, pub
-
     def get_keys(self):
         """
-        If a cached keypair is available, return it; otherwise, generate, cache and return  a new keypair
+        If a cached keypair is available, return it; otherwise, generate, cache and
+        return a new keypair.
         """
         key, pri, pub = self.read_keys()
         if not all([key, pri, pub]):
             key, pri, pub = self.generate_keys()
+            self.cache_keys(pri, pub)
         return key, pub, pri
 
     def encrypt_payload(self, payload, key):
