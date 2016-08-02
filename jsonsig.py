@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import os.path
+import stat
 
 # use the pycrypto package for cleaner access to OpenSSL
 from Crypto.Cipher import PKCS1_OAEP
@@ -62,7 +63,9 @@ class JsonSigner(object):
         self.logger.debug("Caching new public key in {}".format(self.public_key_path))
         with open(self.public_key_path, "wb") as f:
             f.write(pub)
-        # TODO chmod generated keyfiles for security
+        # chmod files for more better gooder security
+        os.chmod(self.private_key_path, (stat.S_IRUSR | stat.S_IWUSR))
+        os.chmod(self.public_key_path, (stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH))
         self.logger.debug("...done")
         return key, pri, pub
 
