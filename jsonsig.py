@@ -29,6 +29,7 @@ def build_logger(log_level=logging.DEBUG):
 
 class JsonSigner(object):
 
+    # payloads greater than this length will raise a ValueError
     MAX_INPUT_LEN = 250
 
     @property
@@ -40,7 +41,11 @@ class JsonSigner(object):
         return os.path.join(self.args.key_cache_dir, self.args.key_cache_name) + ".pub"
 
     def read_keys(self):
+        """
+        Look for cached key objects; if found, import and return them. If not found, return (None, None, None).
+        """
         key = pri = pub = None
+        # if either the public or private key object is missing, bail
         if os.path.exists(self.private_key_path) and os.path.exists(self.public_key_path):
             self.logger.debug("Reading existing private key from {}".format(self.private_key_path))
             with open(self.private_key_path, "rb") as f:
@@ -51,11 +56,17 @@ class JsonSigner(object):
                 pub = f.read()
         return key, pri, pub
 
-    def generate_keys(self):
+    def generate_keys(self, bits=4096):
+        """
+        Generate a new RSA public/private keypair of the specified bit length and cache it
+        on the filesystem. Returns the pycrypto key object, the PEM-encoded public key object,
+        and the PEM-encoded private key object.
+        """
         self.logger.debug("Generating new {} bit key pair...".format(bits))
-        key = RSA.generate(bits=4096)
+        key = RSA.generate(bits=bits)
         pub = key.publickey().exportKey("PEM")
         pri = key.exportKey("PEM")
+        # ensure the key cache dir exists
         os.makedirs(self.args.key_cache_dir, exist_ok=True)
         self.logger.debug("Caching new private key in {}".format(self.private_key_path))
         with open(self.private_key_path, "wb") as f:
@@ -70,16 +81,30 @@ class JsonSigner(object):
         return key, pri, pub
 
     def get_keys(self):
+        """
+        If a cached keypair is available, return it; otherwise, generate, cache and return  a new keypair
+        """
         key, pri, pub = self.read_keys()
         if not all([key, pri, pub]):
             key, pri, pub = self.generate_keys()
         return key, pub, pri
 
     def encrypt_payload(self, payload, key):
+        """
+        Encrypt the provided payload using the cached pub-pri keypair according to PKCS#1 OAEP.
+        See https://www.dlitz.net/software/pycrypto/api/2.6/Crypto.Cipher.PKCS1_OAEP-module.html
+        and http://www.ietf.org/rfc/rfc3447.txt
+        """
         cipher = PKCS1_OAEP.new(key, hashAlgo=SHA256)
         return cipher.encrypt(bytes(payload, "utf-8"))
 
     def build_response(self):
+        """
+        Generate and return the final dictionary, ready for JSONification
+        Care must be given to encodings: the encrypted payload must first be converted from it's native byte structure
+        to a base64 string, then to unicode for JSON readiness. Similarly, the PEM-encoded public key must be coverted
+        to unicode as well.
+        """
         key, pub, pri = self.get_keys()
         enc_payload = self.encrypt_payload(self.args.payload, key)
         response = {
@@ -103,8 +128,11 @@ class JsonSigner(object):
                 help="The basename of the cached keys. Defaults to %(prog)s")
         parser.add_argument('--verbose', action="store_true", help="Enable extra status output")
         self.args = parser.parse_args()
+        # check params for validity
         if len(self.args.payload) > self.MAX_INPUT_LEN:
             raise ValueError('Input value must be {} chars or less'.format(self.MAX_INPUT_LEN))
+        # set param defaults
+        # ..handle these here instead of inline in the argument construct since they're a bit heavy
         if self.args.key_cache_dir is None:
             self.args.key_cache_dir = os.path.abspath(os.path.join(os.getcwd(), "keys"))
         if self.args.key_cache_name is None:
