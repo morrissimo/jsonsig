@@ -8,7 +8,7 @@ import os
 import os.path
 import stat
 
-# use the pycrypto package for cleaner access to OpenSSL
+# use the pycrypto package
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
