@@ -59,12 +59,13 @@ class JsonSigner(object):
         if perms:
             os.chmod(path, perms)
 
-    def generate_keys(self, bits=4096):
+    def generate_keys(self, bits=None):
         """
         Generate a new RSA public/private keypair of the specified bit length.
         Returns the pycrypto key object, the PEM-encoded public key object,
         and the PEM-encoded private key object.
         """
+        bits = bits or self.args.key_size
         self.logger.debug("Generating new {} bit key pair...".format(bits))
         key = RSA.generate(bits=bits)
         pub = key.publickey().exportKey("PEM")
@@ -144,6 +145,7 @@ class JsonSigner(object):
                 description="RSA public/private key encode and repackage an input string as JSON")
         parser.add_argument('payload',
                 help="A UTF-8 string to be pub/pri key encoded, up to {} chars.".format(self.MAX_INPUT_LEN))
+        parser.add_argument('--key-size', type=int, default=4096, help="The bitsize of generated RSA key. Defaults to %(default)s")
         parser.add_argument('--key-cache-dir', default=None,
                 help="Where cached RSA keys will be stored. Defaults to '<current working dir>/keys'")
         parser.add_argument('--key-cache-name', default=parser.prog,
