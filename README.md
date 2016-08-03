@@ -14,10 +14,16 @@ $ git clone https://github.com/morrissimo/jsonsig.git
 ```bash
 $ cd jsonsig
 $ virtualenv ./venv
+# don't forget to activate the new virtualenv!
+$ . ./venv/bin/activate
 ```
 * install requirements via pip:
 ```bash
 $ pip install -r requirements.txt
+```
+* run tests (optional):
+```bash
+$ python tests.py
 ```
 
 ## Usage
@@ -49,7 +55,7 @@ $ python jsonsig.py 'testing'
 ```
 ...should produce output like (but not exactly like!) this:
 ```bash
- python jsonsig.py 'testing'
+$ python jsonsig.py 'testing'
 {
   "pubkey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA4jEpVnxibGQRBSmjU1rY\nNjfsS8cJ/6USQh4Oe2sUdlGKJuYf7cU6a4nSBNApkPkhpVosSAbZPuxGcCNQ6nq5\nZipg4M3f5vmf0y1Di+0Zj5f4xztsY5NI9um0yH8Z8e8+b2Vpn2SuEXAJ54NLo/Zd\nPJ2u4O0O/OoCzk+jgHsXzZuWibhWmO7SqFDf48boVZg5vUI4HU7dVgw5c7CQIN0/\nX7Bzp0SAVus48J2G6s+pp0JIMBb9dCPRz2cJohNm8FPrmjExJ5GOtWjyE5dJUAFg\nfvIVsOIfDVpOIE1vkEhcdhlOLuR8myxB/SzK+zR/rQCCJOKajJBuaIfKJdUmdRjq\nGosvDiUTh20OXpnwpY5ZcBmU3nTvWs9hVouX0gH3paPoWL02903lOCs4eVUvw5IG\nKBpzMznaj+Sp0g8Rq370tLy7e0vX2tLx+GuBoltwXSH6fzVhi2dQIxwblBcJGOZK\nK6WoJR8sN3V90gxH+Z03gkDCfGSnPThxRMxgeai8Xc7MSjK6zo32r8kiO/lpjwI4\nLlgVrHJNMohwdHFMlIp792HB4F3KmSmbtCcl1RGNsmkDTkE/bSXVDBLPoyWpsOLN\no04E79sDy14bOepoa3U8ahZceynZJGBkRAxPQY5n76EKmPqrfRkMFfoUQtxbFIjS\nOSXNSfUHsDBgsXRLk8FlNjcCAwEAAQ==\n-----END PUBLIC KEY-----",
   "message": "testing",
@@ -59,7 +65,7 @@ $ python jsonsig.py 'testing'
 
 
 ## Todos
-* unit tests
+* ~~unit tests~~ done!
 * branched implementation demonstrating no-third-party architecture (but, yuk)
 
 ## Notes
