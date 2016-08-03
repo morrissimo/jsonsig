@@ -63,6 +63,18 @@ $ python jsonsig.py 'testing'
 }
 ```
 
+### Notes on continuous integration (CI)
+Integrating running of the included tests module in a CI suite shouldn't require anything exotic. The CI tool would need to be able to automatically run the setup steps outlined above, up to and including the testing command - which any modern CI tool worthy of consideration should be able to do.
+
+Copypasta-ing all of the above commands into a single script:
+```bash
+git clone https://github.com/morrissimo/jsonsig.git ./jsonsig
+cd jsonsig
+virtualenv ./venv
+./venv/bin/pip install -r requirements.txt
+./venv/bin/python tests.py
+```
+
 
 ## Todos
 * ~~unit tests~~ done!
