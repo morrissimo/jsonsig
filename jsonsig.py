@@ -7,6 +7,7 @@ import logging
 import os
 import os.path
 import stat
+import sys
 
 # use the pycrypto package
 from Crypto.Cipher import PKCS1_OAEP
@@ -134,9 +135,10 @@ class JsonSigner(object):
         }
         return response
 
-    def parse_args(self):
+    def parse_args(self, args):
         """
-        Process command line args and options, ensuring valid values and setting defaults
+        Process command line args and options, ensuring valid values and setting defaults.
+        Require args to be explicitly passed in so we can build some unittests.
         """
         parser = argparse.ArgumentParser(prog="jsonsig",
                 description="RSA public/private key encode and repackage an input string as JSON")
@@ -147,7 +149,7 @@ class JsonSigner(object):
         parser.add_argument('--key-cache-name', default=parser.prog,
                 help="The basename of the cached keys. Defaults to %(prog)s")
         parser.add_argument('--verbose', action="store_true", help="Enable extra status output")
-        self.args = parser.parse_args()
+        self.args = parser.parse_args(args)
         # check params for validity
         if len(self.args.payload) > self.MAX_INPUT_LEN:
             raise ValueError('Input value must be {} chars or less'.format(self.MAX_INPUT_LEN))
@@ -161,11 +163,11 @@ class JsonSigner(object):
         log_level = logging.DEBUG if self.args.verbose else logging.INFO
         self.logger = build_logger(log_level=log_level)
 
-    def main(self):
-        self.parse_args()
+    def main(self, args):
+        self.parse_args(args)
         response = self.build_response()
         print(json.dumps(response, indent=2))
 
 
 if __name__ == '__main__':
-    JsonSigner().main()
+    JsonSigner().main(sys.argv[1:])
